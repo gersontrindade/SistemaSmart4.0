@@ -51,8 +51,8 @@ public class S7ProtocolClient {
     public byte[] createReadRequest(int db, int offset, int bit, int size, String type) {
 
         // Type: str ; real; int ; byte ; bool
-        byte tpSize = 0x00;
-        int startAddress = offset;
+        byte tpSize;
+        int startAddress;
 
         // ((offset << 3) & 0xFFF8 | (bit & 0x07))
         if ((size == 1) & (type.toLowerCase().equals("boolean"))) {
@@ -102,7 +102,7 @@ public class S7ProtocolClient {
 
         // System.out.println("Buffer length: " + buffer.array().length);
         byte tpSize;
-        int startAddress = offset;
+        int startAddress;
 
         // ((offset << 3) & 0xFFF8 | (bit & 0x07))
         if ((size == 1) & (type.toLowerCase().equals("boolean"))) {
@@ -248,7 +248,7 @@ public class S7ProtocolClient {
         try {
             outputStream.write(createConnectionRequest());
             outputStream.flush();
-            byte[] response = readFullResponse();
+            //byte[] response = readFullResponse();
         } catch (Exception e) {
             throw new Exception("Erro ao enviar a solicitação de conexão: " + e.getMessage(), e);
         }
@@ -261,7 +261,7 @@ public class S7ProtocolClient {
         try {
             outputStream.write(createSetupCommunication());
             outputStream.flush();
-            byte[] response = readFullResponse();
+            //byte[] response = readFullResponse();
         } catch (Exception e) {
             throw new Exception("Erro ao enviar o pacote de configuração: " + e.getMessage(), e);
         }
