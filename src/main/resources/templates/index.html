@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <title>Pedidos de Blocos</title>
+    <link rel="stylesheet" th:href="@{/css/smart.css}">
+
+</head>
+
+<body>
+    <!-- HEADER com NAV -->
+    <header class="site-header">
+        <h1>Sistema de Gerenciamento - Bancada Smart 4.0 - SENAI - TIMBÓ-SC</h1>
+        <nav class="nav-bar">
+            <ul class="menu">
+                <li><a href="#" onclick="showTela('inicioTela')">Início</a></li>
+                <li><a href="#" onclick="showTela('lojaTela')">Loja</a></li>
+                <li><a href="#" onclick="showTela('pedidosTela')">Pedidos</a></li>
+                <li><a href="#" onclick="showTela('gestorTela')">Gestor</a></li>
+                <li><a href="#" onclick="showTela('producaoTela')">Produção</a></li>
+                <li><a href="#" onclick="showTela('monitorTela')">Monitoramento</a></li>
+                <li><a href="#" onclick="showTela('supervisaoTela')">Supervisório</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Inclusão dos fragmentos -->
+    <div th:insert="fragments/inicioTela :: inicioTela"></div>
+    <div th:insert="fragments/lojaTela :: lojaTela"></div>
+    <div th:insert="fragments/pedidosTela :: pedidosTela"></div>
+    <div th:insert="fragments/gestorTela :: gestorTela"></div>
+    <div th:insert="fragments/producaoTela :: producaoTela"></div>
+    <div th:insert="fragments/monitorTela :: monitorTela"></div>
+    <div th:insert="fragments/supervisaoTela :: supervisaoTela"></div>
+    <script>
+        function showTela(screenId) {
+            const screens = document.querySelectorAll('.tela');
+            screens.forEach(screen => screen.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        showTela('inicioTela');
+    </script>
+    <script th:src="@{/js/smart.js}"></script>
+
+</body>
+
+</html>
