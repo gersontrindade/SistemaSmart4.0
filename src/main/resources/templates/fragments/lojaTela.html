@@ -1,12 +1,22 @@
 <!-- fragments/lojaScreen.html -->
 <div th:fragment="lojaTela" id="lojaTela" class="tela">
     <div class="tipoBlock">
-        <label for="tipoPedido">Tipo de Pedido:</label>
-        <select id="tipoPedido" onchange="renderBlocos()">
-            <option value="simples">Simples (1 bloco)</option>
-            <option value="duplo">Duplo (2 blocos)</option>
-            <option value="triplo">Triplo (3 blocos)</option>
-        </select>
+        <div class="input-box">
+            <label for="tipoPedido" style="text-align: left; padding-top: 5px;">Tipo de Pedido:</label>
+            <select id="tipoPedido" onchange="renderBlocos()">
+                <option value="simples">Simples (1 bloco)</option>
+                <option value="duplo">Duplo (2 blocos)</option>
+                <option value="triplo">Triplo (3 blocos)</option>
+            </select>
+        </div>
+        <div class="input-box">
+            <label for="corTampa" style="text-align: left; padding-top: 5px;">Cor da Tampa:</label>
+            <select id="corTampa" onchange="revisarPedido()">
+                <option value="1">Preto</option>
+                <option value="2">Vermelho</option>
+                <option value="3">Azul</option>
+            </select>
+        </div>
     </div>
 
     <div id="main-blocos">
@@ -120,6 +130,7 @@
         function renderBlocos() {
 
             const tipo = document.getElementById("tipoPedido").value;
+            //const corTampa = document.getElementById("corTampa").value;
             const container = document.getElementById("blocosContainer");
             container.innerHTML = "";
 
@@ -241,6 +252,7 @@
         function revisarPedido() {
 
             const tipo = document.getElementById("tipoPedido").value;
+            const corTampa = document.getElementById("corTampa").value;
 
             document.getElementById("pedido-pronto").style.display = "flex";
             document.getElementById("pedido-pronto").style.flexDirection = "column";
@@ -279,7 +291,7 @@
 
             //Define se precisa colocar a tampa
             if (andares != 0) {
-                document.getElementById("tampa").src = "assets/bloco/rTampa0.png";
+                document.getElementById("tampa").src = "assets/bloco/rTampa" + corTampa + ".png";
             }
             else {
                 document.getElementById("tampa").src = "assets/bloco/BlocoCor00.png";
@@ -735,7 +747,7 @@
                 }
             });
         }
-        
+
         function executarPedido() {
             const tipo = document.getElementById("tipoPedido").value;
             const ipClp = document.getElementById("hostIpEstoque").value;
