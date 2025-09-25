@@ -10,15 +10,16 @@ import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
-public class S7ProtocolClient {
+public class S7ProtocolClient_ {
 
     private final String plcIpAddress;
     private final int port;
     private Socket socket;
     private OutputStream outputStream;
     private InputStream inputStream;
+    private Object value;
 
-    public S7ProtocolClient(String plcIpAddress, int port) {
+    public S7ProtocolClient_(String plcIpAddress, int port) {
         this.plcIpAddress = plcIpAddress;
         this.port = port;
     }
@@ -29,41 +30,29 @@ public class S7ProtocolClient {
             socket = new Socket(address, port);
             outputStream = socket.getOutputStream();
             inputStream = socket.getInputStream();
-            //System.out.println("Conexão estabelecida com o CLP: " + plcIpAddress + ":" + port);
             return true;
         } catch (IOException e) {
             throw new Exception("Falha ao conectar ao CLP: " + e.getMessage(), e);
         }
     }
 
+    // Métodos para criar as requisições de Conexão, Comunicação, Leitura e Escrita de variáveis no CLP
     private byte[] createConnectionRequest() {
-        return new byte[]{
-            // TPKT Header
-            0x03, 0x00, 0x00, 0x16,
-            // COTP Header
-            0x11, (byte) 0xE0, 0x00, 0x00, 0x00, 0x01,
-            0x00, (byte) 0xC1, 0x02, 0x01, 0x00, (byte) 0xC2, 0x02, 0x01, 0x01, (byte) 0xC0, 0x01, 0x09
-        };
+        return new byte[]{0x03, 0x00, 0x00, 0x16, 0x11, (byte) 0xE0, 0x00, 0x00, 0x00, 0x01,
+            0x00, (byte) 0xC1, 0x02, 0x01, 0x00, (byte) 0xC2, 0x02, 0x01, 0x01, (byte) 0xC0, 0x01, 0x09};
     }
 
     private byte[] createSetupCommunication() {
-        return new byte[]{
-            // TPKT Header
-            0x03, 0x00, 0x00, 0x19,
-            // COTP Header
-            0x02, (byte) 0xF0, (byte) 0x80,
-            // S7 Header
+        return new byte[]{0x03, 0x00, 0x00, 0x19, 0x02, (byte) 0xF0, (byte) 0x80,
             0x32, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00,
-            // Parameters
-            (byte) 0xF0, 0x00, 0x00, 0x01, 0x00, 0x01, (byte) 0x03, (byte) 0xC0
-        };
+            (byte) 0xF0, 0x00, 0x00, 0x01, 0x00, 0x01, 0x03, (byte) 0xC0};
     }
 
     public byte[] createReadRequest(int db, int offset, int bit, int size, String type) {
 
         // Type: str ; real; int ; byte ; bool
-        byte tpSize = 0x00;
-        int startAddress = offset;
+        byte tpSize;
+        int startAddress;
 
         // ((offset << 3) & 0xFFF8 | (bit & 0x07))
         if ((size == 1) & (type.toLowerCase().equals("boolean"))) {
@@ -113,7 +102,7 @@ public class S7ProtocolClient {
 
         // System.out.println("Buffer length: " + buffer.array().length);
         byte tpSize;
-        int startAddress = offset;
+        int startAddress;
 
         // ((offset << 3) & 0xFFF8 | (bit & 0x07))
         if ((size == 1) & (type.toLowerCase().equals("boolean"))) {
@@ -229,51 +218,37 @@ public class S7ProtocolClient {
         return buffer.array();
     }
 
-    public static byte[] hexStringToByteArray(String hexString) {
-        // Verifica se a string é válida
-        if (hexString == null || hexString.length() % 2 != 0) {
-            throw new IllegalArgumentException("A string hex deve ter um número par de caracteres.");
+    private byte[] readFullResponse() throws IOException {
+        byte[] header = inputStream.readNBytes(4);
+        if (header.length < 4) {
+            throw new IOException("Falha ao ler cabeçalho TPKT");
         }
 
-        // Cria um array de bytes para armazenar o resultado
-        byte[] byteArray = new byte[hexString.length() / 2];
-
-        // Para cada par de caracteres hexadecimais na string, converte para um byte
-        for (int i = 0; i < hexString.length(); i += 2) {
-            // Pega os dois caracteres hexadecimais
-            String hexPair = hexString.substring(i, i + 2);
-            // Converte o par hexadecimal para um byte
-            byteArray[i / 2] = (byte) Integer.parseInt(hexPair, 16);
+        int totalLength = ((header[2] & 0xFF) << 8) | (header[3] & 0xFF);
+        if (totalLength < 4) {
+            throw new IOException("Tamanho de pacote inválido: " + totalLength);
         }
 
-        return byteArray;
+        byte[] body = inputStream.readNBytes(totalLength - 4);
+        if (body.length < totalLength - 4) {
+            throw new IOException("Corpo da resposta incompleto");
+        }
+
+        byte[] full = new byte[totalLength];
+        System.arraycopy(header, 0, full, 0, 4);
+        System.arraycopy(body, 0, full, 4, body.length);
+        return full;
     }
 
+    // Métodos para enviar as requisições de Conexão, Comunicação, Leitura e Escrita de variáveis para o CLP
     public void sendConnectionRequest() throws Exception {
         if (outputStream == null) {
-            throw new Exception("Conexão não estabelecida. Chame o método connect() primeiro.");
+            throw new Exception("Conexão não estabelecida.");
         }
-
-        byte[] packet = createConnectionRequest();
-
         try {
+            outputStream.write(createConnectionRequest());
             outputStream.flush();
-            outputStream.write(packet);
-            outputStream.flush();
-
-            // System.out.println("Solicitação de conexão enviada com sucesso ao CLP.");
-            // Leitura da resposta
-            byte[] response = new byte[1024];
-            int length = inputStream.read(response);
-
-            // System.out.println("Resposta de conexão recebida: " + bytesToHex(response,
-            // length));
-            if (length > 0) {
-                //System.out.println("Resposta recebida da conexão: " + Arrays.toString(response));
-            } else {
-                //System.out.println("Nenhuma resposta recebida.");
-            }
-
+            //byte[] response = readFullResponse();
         } catch (Exception e) {
             throw new Exception("Erro ao enviar a solicitação de conexão: " + e.getMessage(), e);
         }
@@ -281,70 +256,31 @@ public class S7ProtocolClient {
 
     public void sendSetupCommunication() throws Exception {
         if (outputStream == null) {
-            throw new Exception("Conexão não estabelecida. Chame o método connect() primeiro.");
+            throw new Exception("Conexão não estabelecida.");
         }
-
-        byte[] packet = createSetupCommunication();
-
         try {
+            outputStream.write(createSetupCommunication());
             outputStream.flush();
-            outputStream.write(packet);
-            outputStream.flush();
-
-            // System.out.println("Pacote de configuração enviado com sucesso ao CLP.");
-            // Leitura da resposta
-            byte[] response = new byte[1024];
-            int length = inputStream.read(response);
-            // System.out.println("Resposta de configuração recebida: " +
-            // bytesToHex(response, length));
-            if (length > 0) {
-                //System.out.println("Resposta recebida da configuração de comunicação: " + Arrays.toString(response));
-            } else {
-                //System.out.println("Nenhuma resposta recebida.");
-            }
+            //byte[] response = readFullResponse();
         } catch (Exception e) {
             throw new Exception("Erro ao enviar o pacote de configuração: " + e.getMessage(), e);
         }
     }
 
-    private String lastReadValue;
-    private Object value;
-
-    public String getValueFromLastRead() {
-        return lastReadValue;
-    }
-
-    byte[] response = new byte[1024];
-    int length = 0;
-
-    @SuppressWarnings("UseSpecificCatch")
     public Object sendReadRequest(int db, int offset, int bit, int size, String type) throws Exception {
-
         if (outputStream == null) {
-            throw new Exception("Conexão não estabelecida. Chame o método connect() primeiro.");
+            throw new Exception("Conexão não estabelecida.");
         }
-
-        byte[] packet = createReadRequest(db, offset, bit, size, type);
-
         try {
-
-            outputStream.flush();
+            byte[] packet = createReadRequest(db, offset, bit, size, type);
             outputStream.write(packet);
             outputStream.flush();
-
-            Thread.sleep(50);
-            // Leitura da resposta
-            response = new byte[1024];
-            length = inputStream.read(response);
-
-            // Interpretação do valor lido
+            byte[] response = readFullResponse();
             switch (type.toLowerCase()) {
                 case "string" ->
                     value = extractStringFromResponse(response, size);
-                case "block" -> {
+                case "block" ->
                     value = extractBlockFromResponse(response, size);
-                    //System.out.println("Retorno de Leitura [Block] DB="+db+" OFFSET="+offset+" SIZE="+size+" : " + bytesToHex(extractBlockFromResponse(response, size),size));
-                }
                 case "integer" ->
                     value = extractIntegerFromResponse(response);
                 case "float" ->
@@ -356,83 +292,68 @@ public class S7ProtocolClient {
                 default ->
                     throw new IllegalArgumentException("Tipo de variável não suportado.");
             }
-
             return value;
-
         } catch (Exception e) {
             throw new Exception("Erro ao enviar o pacote de leitura: " + e.getMessage(), e);
         }
     }
 
     public boolean sendWriteRequest(int db, int offset, int bit, int size, String type, Object value) throws Exception {
-
         if (outputStream == null) {
-            throw new Exception("Conexão não estabelecida. Chame o método connect() primeiro.");
+            throw new Exception("Conexão não estabelecida.");
         }
-
-        //System.out.println("Tamanho BOOLEAN: " + size);
-        byte[] packet = createWriteRequest(db, offset, bit, size, type, value);
-
         try {
-            outputStream.flush();
+            byte[] packet = createWriteRequest(db, offset, bit, size, type, value);
             outputStream.write(packet);
             outputStream.flush();
-            // System.out.println("Solicitação de escrita enviada com sucesso ao CLP.");
-
-            // Leitura da resposta
-            response = new byte[50];
-            length = inputStream.read(response);
-
-            return response[21] == (byte) 0xFF;
-            // System.out.println("Resposta de conexão recebida: " + bytesToHex(response,
-            // length) + " - ESCRITA - " + length);
-
+            byte[] response = readFullResponse();
+            return response.length >= 22 && response[21] == (byte) 0xFF;
         } catch (IOException e) {
-            throw new Exception("Erro ao enviar o pacote de leitura: " + e.getMessage(), e);
+            throw new Exception("Erro ao enviar o pacote de escrita: " + e.getMessage(), e);
         }
-
     }
 
+    // Métodos para extrair as variáveis obtidas nas respostas do CLP
     private int extractIntegerFromResponse(byte[] response) {
-
-        // System.out.println("\n\nResposta de leitura Integer recebida: " +
-        // bytesToHex(response, length));
-        // System.out.println("\n\n");
+        if (response.length < 27) {
+            throw new IllegalArgumentException("Resposta muito curta para leitura de inteiro.");
+        }
         return ByteBuffer.wrap(response, 25, 2).order(ByteOrder.BIG_ENDIAN).getShort();
     }
 
     private float extractFloatFromResponse(byte[] response) {
-        //System.out.println("\n\nResposta de Leitura Float recebida: " + bytesToHex(response, length));
-        //System.out.println(response.length);
+        if (response.length < 29) {
+            throw new IllegalArgumentException("Resposta muito curta para leitura de float.");
+        }
         return ByteBuffer.wrap(response, 25, 4).order(ByteOrder.BIG_ENDIAN).getFloat();
     }
 
     private byte extractByteFromResponse(byte[] response) {
-        // System.out.println("\n\nResposta de Leitura Float recebida: " +
-        // bytesToHex(response, length));
-        // System.out.println(response.length);
+        if (response.length < 26) {
+            throw new IllegalArgumentException("Resposta muito curta para leitura de byte.");
+        }
         return ByteBuffer.wrap(response, 25, 1).order(ByteOrder.BIG_ENDIAN).get();
     }
 
     private byte[] extractBlockFromResponse(byte[] response, int size) {
-        // System.out.println("\n\nResposta de Leitura Float recebida: " +
-        // bytesToHex(response, length));
-        // System.out.println(response.length);
-        int startIndex = 25;
-        return Arrays.copyOfRange(response, startIndex, (startIndex + size));
+        if (response.length < 25 + size) {
+            throw new IllegalArgumentException("Resposta muito curta para leitura de bloco.");
+        }
+        return Arrays.copyOfRange(response, 25, 25 + size);
     }
 
     private boolean extractBooleanFromResponse(byte[] response) {
+        if (response.length < 26) {
+            throw new IllegalArgumentException("Resposta muito curta para leitura de boolean.");
+        }
         return (response[25] & 0x01) == 1;
     }
 
     private String extractStringFromResponse(byte[] response, int size) {
-        // System.out.println("\n\nResposta de Leitura String recebida: " +
-        // bytesToHex(response, length));
-        // System.out.println("\n\n");
-        //
-        int startIndex = 25;
-        return new String(response, startIndex, size).trim();
+        if (response.length < 25 + size) {
+            throw new IllegalArgumentException("Resposta muito curta para leitura de string.");
+        }
+        return new String(response, 25, size).trim();
     }
 
     public void disconnect() {
@@ -464,4 +385,5 @@ public class S7ProtocolClient {
         }
         return sb.toString().trim();
     }
+
 }

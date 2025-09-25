@@ -34,8 +34,11 @@
 
                         // let pedidoHTML = `<h3>Pedido ${index + 1} - Tipo: ${pedido.tipo} - Status: ${pedido.statusOrderProduction}</h3>`;
 
+                        const corTampa = corTextoBlocoTampa(pedido.tampa || pedido.corTampa); // suporta os dois nomes
+
                         let pedidoHTML = `<h3 style="margin-bottom: 5px;">Pedido: <span style="font-weight: normal;">${index + 1}</span></h3> 
                                           <p><strong>Tipo:</strong> ${pedido.tipo}</p>
+                                          <p><strong>Cor da tampa: <span style="color: ${corTampa.css}; font-weight: bold;">${corTampa.nome}</span></p>
                                           <p><strong>Status:</strong> ${pedido.statusOrderProduction}</p>`;
 
                         if (pedido.statusOrderProduction && pedido.statusOrderProduction.toLowerCase() === "pendente") {
@@ -47,7 +50,7 @@
                         pedido.blocos.forEach((bloco, i) => {
                             const blocoDiv = document.createElement("div");
 
-                            const corBloco = corTextoBloco(bloco.cor || bloco.corBloco); // suporta os dois nomes
+                            const corBloco = corTextoBlocoTampa(bloco.cor || bloco.corBloco); // suporta os dois nomes
                             blocoDiv.innerHTML = `<div style="margin-top: 10px;"><strong>Bloco ${i + 1}</strong> - Cor: <span style="color: ${corBloco.css}; font-weight: bold;">${corBloco.nome}</span></div>`;
 
                             // blocoDiv.innerHTML = `<strong>Bloco ${i + 1}</strong> - Cor: <span style="color: ${corBloco.css}; font-weight: bold;">${corBloco.nome}</span><br>`;
@@ -69,7 +72,7 @@
         }
 
         // Função auxiliar para mapear número da cor para nome e cor CSS
-        function corTextoBloco(codigo) {
+        function corTextoBlocoTampa(codigo) {
             switch (codigo) {
                 case 1:
                     return { nome: "PRETO", css: "black" };

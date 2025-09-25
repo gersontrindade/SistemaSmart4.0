@@ -37,6 +37,7 @@ public class LojaController {
     public ResponseEntity<Long> receberPedido(@RequestBody PedidoDTO pedidoDTO) {
         Pedido pedido = new Pedido();
         pedido.setTipo(pedidoDTO.getTipo());
+        pedido.setTampa(pedidoDTO.getTampa());
         pedido.setStatusOrderProduction(pedidoDTO.getStatusOrderProduction());
         pedido.setTimeStamp(pedidoDTO.getTimeStamp());
 

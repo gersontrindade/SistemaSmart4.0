@@ -301,25 +301,41 @@ public class SmartService {
     //*************************************************************
     // Função para envio de bloco de bytes ao CLP
     //*************************************************************
-    public void enviarBlocoBytesAoClp(String ipClp, int db, int offset, byte[] dados, int size) throws Exception {
-        // Use o IP e porta corretos do CLP de destino
-
-        // Imprime os dados em hexadecimal antes do envio
-        // System.out.println("Enviando dados para o CLP " + ipClp + " (offset: " + offset + ", size: " + size + "):");
-        // System.out.print("Bytes em hexadecimal: ");
-        for (int i = 0; i < size; i++) {
-            // System.out.printf("%02X ", dados[i]);
-        }
-        System.out.println(); // quebra de linha final
-
+    // public void enviarBlocoBytesAoClp(String ipClp, int db, int offset, byte[] dados, int size) throws Exception {
+    //     // Use o IP e porta corretos do CLP de destino
+    //     // Imprime os dados em hexadecimal antes do envio
+    //     // System.out.println("Enviando dados para o CLP " + ipClp + " (offset: " + offset + ", size: " + size + "):");
+    //     // System.out.print("Bytes em hexadecimal: ");
+    //     for (int i = 0; i < size; i++) {
+    //         // System.out.printf("%02X ", dados[i]);
+    //     }
+    //     System.out.println(); // quebra de linha final
+    //     PlcConnector plcConnector = PlcConnectionManager.getConexao(ipClp);
+    //     if (plcConnector == null) {
+    //         return;
+    //     }
+    //     if (readOnly == false) {
+    //         System.out.println(" Aqui em: enviarBlocoBytesAoClp");
+    //         plcConnector.writeBlock(db, offset, size, dados); // escreve no bloco de dados
+    //     }
+    // }
+    public boolean enviarBlocoBytesAoClp(String ipClp, int db, int offset, byte[] dados, int size) {
         PlcConnector plcConnector = PlcConnectionManager.getConexao(ipClp);
         if (plcConnector == null) {
-            return;
+            System.out.println("Sem conexão com CLP " + ipClp);
+            return false;
         }
-        if (readOnly == false) {
-            System.out.println(" Aqui em: enviarBlocoBytesAoClp");
-            plcConnector.writeBlock(db, offset, size, dados); // escreve no bloco de dados
+        if (!readOnly) {
+            try {
+                plcConnector.writeBlock(db, offset, size, dados); // escreve no bloco de dados
+                return true;
+            } catch (Exception e) {
+                e.printStackTrace();
+                return false;
+            }
         }
+        // se for readOnly ou nada a fazer, considere sucesso
+        return true;
     }
 
     //*************************************************************
@@ -352,6 +368,7 @@ public class SmartService {
 
                 // plcConnector.writeBit(9, 62, 0, Boolean.parseBoolean("FALSE"));
                 // Iniciar pedido
+                System.out.println("INICIAR PEDIDO 2");
                 plcConnector.writeBit(9, 62, 0, Boolean.parseBoolean("TRUE"));
 
             } catch (Exception ex) {

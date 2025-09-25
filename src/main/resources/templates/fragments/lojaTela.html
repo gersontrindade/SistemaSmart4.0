@@ -666,10 +666,12 @@
 
         function salvarPedido() {
             const tipo = document.getElementById("tipoPedido").value;
+            const tampa = document.getElementById("corTampa").value;
             const blocos = document.querySelectorAll(".bloco");
 
             const pedido = {
                 tipo: tipo,
+                tampa: tampa,
                 blocos: [],
                 statusOrderProduction: "pendente",
                 timeStamp: new Date().toISOString()
@@ -718,6 +720,7 @@
         function enviarPedidoTeste() {
             const pedido = {
                 tipo: "simples",
+                tampa: "preto",
                 blocos: [
                     {
                         andar: 1,
@@ -750,6 +753,7 @@
 
         function executarPedido() {
             const tipo = document.getElementById("tipoPedido").value;
+            const tampa = document.getElementById("corTampa").value;
             const ipClp = document.getElementById("hostIpEstoque").value;
 
             if (!ipClp) {
@@ -795,6 +799,7 @@
             const pedidoDTO = {
                 id: pedidoId,
                 tipo: tipo,
+                tampa: tampa,
                 ipClp: ipClp,
                 blocos: blocos
             };

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.client.RestTemplate;
 
 import com.tecdes.sistema_bancada.dto.BlocoDTO;
 import com.tecdes.sistema_bancada.dto.LaminaDTO;
@@ -54,14 +55,76 @@ public class SmartController {
     @Autowired
     private PedidoRepository pedidoRepository;
 
+    // @PostMapping("/iniciar-pedido")
+    // public ResponseEntity<String> iniciarPedido(@RequestBody PedidoDTO pedidoDTO) {
+    //     Long idPedido = pedidoDTO.getId(); // novo
+    //     String tipo = pedidoDTO.getTipo();
+    //     int tampa = pedidoDTO.getTampa();
+    //     String ipClp = pedidoDTO.getIpClp();
+    //     List<BlocoDTO> pedido = pedidoDTO.getBlocos();
+    //     System.out.println("Iniciando pedido ID: " + idPedido);
+    //     System.out.println("Pedido recebido para IP do CLP: " + ipClp);
+    //     System.out.println("Pedido tipo: " + tipo);
+    //     System.out.println("Cor da tampa: " + (tampa == 1 ? "Preto" : tampa == 2 ? "Vermelho" : "Azul"));
+    //     for (BlocoDTO bloco : pedido) {
+    //         System.out.println("Andar: " + bloco.getAndar() + ", Cor do Bloco: " + bloco.getCorBloco());
+    //         int i = 1;
+    //         for (LaminaDTO lamina : bloco.getLaminas()) {
+    //             System.out.println("  Lâmina-" + i + ": Cor = " + lamina.getCor() + ", Padrão = " + lamina.getPadrao());
+    //             i++;
+    //         }
+    //     }
+    //     try {
+    //         byte[] bytePedidoArray = montarPedidoParaCLP(pedido, idPedido);
+    //         System.out.print("Bytes do pedido em hexadecimal: ");
+    //         for (byte b : bytePedidoArray) {
+    //             System.out.printf("%02X ", b);
+    //         }
+    //         System.out.println();
+    //         smartService.enviarBlocoBytesAoClp(ipClp, 9, 2, bytePedidoArray, bytePedidoArray.length);
+    //         // === Enviar a cor da tampa para o Seletor de Tampas ===
+    //         try {
+    //             RestTemplate apiSeletorTampa = new RestTemplate();
+    //             // Monta a URL substituindo X pelo valor da tampa
+    //             String url = "http://10.74.241.245/api/move_pos?pos=" + tampa;
+    //             // Faz a chamada GET
+    //             ResponseEntity<String> response = apiSeletorTampa.getForEntity(url, String.class);
+    //             String respostaApi = response.getBody();
+    //             System.out.println("Resposta do seletor de tampa: " + respostaApi);
+    //             // Verifica se a resposta começa com "Ok"
+    //             if (respostaApi != null && respostaApi.startsWith("Ok")) {
+    //                 System.out.println("API retornou OK, prosseguindo com o pedido...");
+    //             } else {
+    //                 System.out.println("API não retornou OK. Resposta: " + respostaApi);
+    //                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+    //                         .body("Erro: seletor de tampa não confirmou a posição.");
+    //             }
+    //         } catch (Exception e) {
+    //             System.out.println("ERRO: na tentativa de mover posição no seletor de tampa");
+    //             e.printStackTrace();
+    //             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+    //                     .body("Erro ao comunicar com o seletor de tampa: " + e.getMessage());
+    //         }
+    //         smartService.iniciarExecucaoPedido(ipClp);
+    //         return ResponseEntity.ok("Pedido enviado ao CLP com sucesso.");
+    //     } catch (Exception e) {
+    //         e.printStackTrace();
+    //         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+    //                 .body("Erro ao enviar pedido ao CLP: " + e.getMessage());
+    //     }
+    // }
     @PostMapping("/iniciar-pedido")
     public ResponseEntity<String> iniciarPedido(@RequestBody PedidoDTO pedidoDTO) {
-        Long idPedido = pedidoDTO.getId(); // novo
+        Long idPedido = pedidoDTO.getId();
+        String tipo = pedidoDTO.getTipo();
+        int tampa = pedidoDTO.getTampa();
         String ipClp = pedidoDTO.getIpClp();
         List<BlocoDTO> pedido = pedidoDTO.getBlocos();
 
         System.out.println("Iniciando pedido ID: " + idPedido);
         System.out.println("Pedido recebido para IP do CLP: " + ipClp);
+        System.out.println("Pedido tipo: " + tipo);
+        System.out.println("Cor da tampa: " + (tampa == 1 ? "Preto" : tampa == 2 ? "Vermelho" : "Azul"));
 
         for (BlocoDTO bloco : pedido) {
             System.out.println("Andar: " + bloco.getAndar() + ", Cor do Bloco: " + bloco.getCorBloco());
@@ -81,14 +144,51 @@ public class SmartController {
             }
             System.out.println();
 
-            smartService.enviarBlocoBytesAoClp(ipClp, 9, 2, bytePedidoArray, bytePedidoArray.length);
+            // === 1) Enviar bloco de bytes ao CLP ===
+            boolean envioClpOk = smartService.enviarBlocoBytesAoClp(ipClp, 9, 2, bytePedidoArray, bytePedidoArray.length);
+            if (!envioClpOk) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body("Erro: falha ao enviar bloco de bytes ao CLP.");
+            }
+
+            // 2) Selecionar a tampa
+            try {
+                RestTemplate apiSeletorTampa = new RestTemplate();
+                String url = "http://10.74.241.245/api/move_pos?pos=" + tampa;
+
+                // Lê resposta como Map para interpretar o JSON {"status": "..."}
+                ResponseEntity<Map> response = apiSeletorTampa.getForEntity(url, Map.class);
+                Map<String, Object> body = response.getBody();
+
+                if (body == null || !body.containsKey("status")) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body("Erro: seletor de tampas não retornou resposta válida.");
+                }
+
+                String status = body.get("status").toString();
+                System.out.println("Resposta do seletor de tampas: " + status);
+
+                if (!status.startsWith("Ok")) {
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body("Erro: seletor de tampas não confirmou a posição. Resposta: " + status);
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body("Erro ao comunicar com o seletor de tampas: " + e.getMessage());
+            }
+
+            // === Só chega aqui se os dois passos anteriores foram bem sucedidos ===
+            System.out.println("INICIAR PEDIDO 1");
             smartService.iniciarExecucaoPedido(ipClp);
 
-            return ResponseEntity.ok("Pedido enviado ao CLP com sucesso.");
+            return ResponseEntity.ok("Pedido enviado e iniciado no CLP com sucesso.");
+
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erro ao enviar pedido ao CLP: " + e.getMessage());
+                    .body("Erro ao processar pedido: " + e.getMessage());
         }
     }
 
