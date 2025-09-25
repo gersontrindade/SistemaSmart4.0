@@ -7,6 +7,8 @@ public class PedidoDTO {
 
     private Long id;
     private String tipo;
+    private int tampa;
+
     private String ipClp;
     private String statusOrderProduction;
     private Timestamp timeStamp;
@@ -29,6 +31,14 @@ public class PedidoDTO {
         this.tipo = tipo;
     }
 
+    public int getTampa() {
+        return tampa;
+    }
+
+    public void setTampa(int tampa) {
+        this.tampa = tampa;
+    }
+    
     public String getIpClp() {
         return ipClp;
     }

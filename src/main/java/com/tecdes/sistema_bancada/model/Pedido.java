@@ -22,6 +22,7 @@ public class Pedido {
     private Long id;
 
     private String tipo;
+    private int tampa;
     private int orderProduction;
     private String statusOrderProduction;
 
@@ -50,11 +51,19 @@ public class Pedido {
     public String getTipo() {
         return tipo;
     }
-
+    
     public void setTipo(String tipo) {
         this.tipo = tipo;
     }
 
+    public int getTampa() {
+        return tampa;
+    }
+
+    public void setTampa(int tampa) {
+        this.tampa = tampa;
+    }
+    
     public int getOrderProduction() {
         return orderProduction;
     }
